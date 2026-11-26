@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Controles IA Search Lab</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            font-size: 15px;
+            color: #58D8A4;
+        }
+
+        button {
+            background: #332B31;
+            color: #58D8A4;
+            border: 1px solid #58D8A4;
+            border-radius: 8px;
+            padding: 12px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        button:focus {
+            outline: 2px solid #F5C76B;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <button id="control">
+        Haz clic aquí para activar W, A, S, D
+    </button>
+
+    <script>
+
+        // ==========================================
+        // COMUNICACIÓN CON STREAMLIT
+        // ==========================================
+
+        const send = (type, extra = {}) => {
+
+            parent.postMessage(
+                {
+                    isStreamlitMessage: true,
+                    type,
+                    ...extra
+                },
+                "*"
+            );
+
+        };
+
+        const control = document.getElementById(
+            "control"
+        );
+
+        let enabled = true;
+
+        // ==========================================
+        // RECIBIR INFORMACIÓN DE STREAMLIT
+        // ==========================================
+
+        window.addEventListener(
+            "message",
+            e => {
+
+                if (
+                    e.source !== parent ||
+                    !e.data ||
+                    e.data.type !== "streamlit:render"
+                ) {
+                    return;
+                }
+
+                enabled = !e.data.args.disabled;
+
+                control.disabled = !enabled;
+
+                send(
+                    "streamlit:setFrameHeight",
+                    {
+                        height: 55
+                    }
+                );
+
+            }
+        );
+
+        // ==========================================
+        // ACTIVAR CONTROLES
+        // ==========================================
+
+        control.addEventListener(
+            "click",
+            () => {
+
+                control.focus();
+
+            }
+        );
+
+        control.addEventListener(
+            "focus",
+            () => {
+
+                control.textContent =
+                    "Teclado activo: W ↑ · A ← · S ↓ · D →";
+
+            }
+        );
+
+        control.addEventListener(
+            "blur",
+            () => {
+
+                control.textContent =
+                    "Haz clic aquí para activar W, A, S, D";
+
+            }
+        );
+
+        // ==========================================
+        // DETECTAR TECLAS
+        // ==========================================
+
+        window.addEventListener(
+            "keydown",
+            e => {
+
+                const key = e.key.toLowerCase();
+
+                if (
+                    !enabled ||
+                    e.repeat ||
+                    e.ctrlKey ||
+                    e.altKey ||
+                    e.metaKey ||
+                    !["w", "a", "s", "d"].includes(key)
+                ) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                send(
+                    "streamlit:setComponentValue",
+                    {
+                        value: {
+                            key: key,
+                            id: Date.now() + ":" + Math.random()
+                        },
+                        dataType: "json"
+                    }
+                );
+
+            }
+        );
+
+        // ==========================================
+        // INICIAR COMPONENTE
+        // ==========================================
+
+        send(
+            "streamlit:componentReady",
+            {
+                apiVersion: 1
+            }
+        );
+
+        send(
+            "streamlit:setFrameHeight",
+            {
+                height: 55
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
